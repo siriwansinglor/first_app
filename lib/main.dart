@@ -1,6 +1,10 @@
 import 'package:first_app/assignment.dart';
+import 'package:first_app/counter_widget.dart';
+import 'package:first_app/navigation.dart/first_page.dart';
 import 'package:flutter/material.dart';
 import 'package:first_app/week3.dart';
+import 'package:first_app/greeting_widget.dart';
+import 'package:first_app/counter_fullwidget.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +22,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       debugShowCheckedModeBanner: false,
-      home: Assignment(),
+      home: FirstPage(),
     );
   }
 }
