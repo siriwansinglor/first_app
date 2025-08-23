@@ -17,7 +17,8 @@ class FirstPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (BuildContext context) => const SecondPage(),
+                    builder: (BuildContext context) =>
+                        SecondPage(name: 'Dev', age: 20),
                   ),
                 );
               },

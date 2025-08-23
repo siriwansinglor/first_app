@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 class SecondPage extends StatelessWidget {
-  const SecondPage({super.key});
+  final String name;
+  final int age;
+
+  const SecondPage({super.key, required this.name, required this.age});
 
   @override
   Widget build(BuildContext context) {
@@ -11,14 +14,10 @@ class SecondPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Text('Name $name Age $age'),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (BuildContext context) => const SecondPage(),
-                  ),
-                );
+                Navigator.pop(context);
               },
               child: Text('< First Page >'),
             ),
