@@ -1,6 +1,5 @@
 import 'package:first_app/api_example.dart/ApiExample.dart';
 import 'package:first_app/api_example.dart/api_assignment.dart';
-import 'package:first_app/api_example.dart/api_example1.dart';
 import 'package:first_app/assignment.dart';
 import 'package:first_app/counter_widget.dart';
 import 'package:first_app/form_example.dart/form_example1.dart';
@@ -13,9 +12,15 @@ import 'package:first_app/counter_fullwidget.dart';
 import 'package:first_app/counter_fullwidget.dart';
 import 'package:first_app/form_example.dart/form_example1.dart';
 import 'package:first_app/form_example.dart/assignment_form.dart';
-import 'package:first_app/api_example.dart/api_example1.dart';
+import 'package:first_app/api_example.dart/ApiExampleList.dart';
+import 'package:first_app/api_example.dart/AssignmentWeek5.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:first_app/firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }
 
@@ -31,7 +36,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       debugShowCheckedModeBanner: false,
-      home: ApiAssignment(),
+      home: Assigmentweek5(),
     );
   }
 }
