@@ -16,6 +16,9 @@ import 'package:first_app/api_example.dart/ApiExampleList.dart';
 import 'package:first_app/api_example.dart/AssignmentWeek5.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:first_app/firebase_options.dart';
+import 'package:first_app/page/simple_custom_widget.dart';
+import 'package:first_app/components/custom_card.dart';
+import 'package:first_app/page/simple.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +39,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       debugShowCheckedModeBanner: false,
-      home: Assigmentweek5(),
+      home: Simple(),
     );
   }
 }
