@@ -19,6 +19,8 @@ import 'package:first_app/firebase_options.dart';
 import 'package:first_app/page/simple_custom_widget.dart';
 import 'package:first_app/components/custom_card.dart';
 import 'package:first_app/page/simple.dart';
+import 'package:first_app/page/animation_test.dart';
+import 'package:first_app/page/traffic_light.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +41,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       debugShowCheckedModeBanner: false,
-      home: Simple(),
+      home: TrafficLight(),
     );
   }
 }
