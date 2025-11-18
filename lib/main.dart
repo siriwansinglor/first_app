@@ -1,8 +1,17 @@
+import 'package:first_app/Search_Page.dart';
+import 'package:first_app/answer1.dart';
+import 'package:first_app/answer1morning.dart';
+import 'package:first_app/answer2.dart';
+import 'package:first_app/answer2morning.dart';
+import 'package:first_app/answer3morning.dart';
 import 'package:first_app/api_example.dart/ApiExample.dart';
 import 'package:first_app/api_example.dart/api_assignment.dart';
 import 'package:first_app/assignment.dart';
 import 'package:first_app/counter_widget.dart';
+import 'package:first_app/form_example.dart/assignment_form_new.dart';
 import 'package:first_app/form_example.dart/form_example1.dart';
+import 'package:first_app/insert_page.dart';
+import 'package:first_app/login_page.dart';
 import 'package:first_app/navigation.dart/first_page.dart';
 import 'package:first_app/navigation.dart/second_page.dart';
 import 'package:flutter/material.dart';
@@ -41,11 +50,12 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       debugShowCheckedModeBanner: false,
-      home: TrafficLight(),
+      home: LoginPage(),
     );
   }
 }
 
+//gs://final-project-mb-97077.firebasestorage.app
 // stl+enter
 class MyWidget extends StatelessWidget {
   const MyWidget({super.key});
