@@ -1,17 +1,21 @@
-import 'package:flutter/foundation.dart'; // สำหรับ kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'search_page.dart';
+import 'edit_page.dart';
+import 'delete_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'login_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-// class นี้ใช้เก็บข้อมูลของ "แต่ละท่อน" (1 ท่อน = รูป + อังกฤษ + ไทย)
+// class for keep each section (1 section = image + storyline EN + storyline TH)
 class StorySection {
   TextEditingController enController = TextEditingController();
   TextEditingController thController = TextEditingController();
-  Uint8List? imageBytes;
+  Uint8List? imageBytes; // keep image as Bytes
   String? imageName;
-
   StorySection();
 }
 
@@ -23,47 +27,60 @@ class InsertPage extends StatefulWidget {
 }
 
 class _MyWidgetState extends State<InsertPage> {
-  // ส่วนหัวเรื่อง (Cover)
   final TextEditingController _nameController = TextEditingController();
-  Uint8List? _coverImageBytes;
+
+  // List of Genre
+  final List<String> _allGenres = [
+    "Adventure",
+    "Fantasy",
+    "Fable",
+    "Comedy",
+    "Drama",
+    "Horror",
+    "Sci-Fi",
+    "Romance",
+    "Action",
+  ];
+
+  // keep Genre that selected
+  List<String> _selectedGenres = [];
+
+  Uint8List? _coverImageBytes; // keep Cover Image
   String? _coverName;
-
-  // รายการเนื้อหา (เริ่มต้นมี 1 ท่อนเสมอ)
+  // list of story
   List<StorySection> _sections = [];
-
-  final ImagePicker _picker = ImagePicker();
-  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker(); // select image from device
+  bool _isUploading = false; // status of upload
 
   @override
   void initState() {
     super.initState();
-    // เริ่มต้น App มา ให้มีช่องกรอกเนื้อหาท่อนที่ 1 รอไว้เลย
+    // create new content for input
     _sections.add(StorySection());
   }
 
-  // ฟังก์ชันกดปุ่ม (+) แล้วเพิ่มช่องกรอกต่อท้ายในหน้านี้
-  void _addNewSection() {
-    setState(() {
-      _sections.add(StorySection()); // เพิ่มท่อนใหม่ลงใน List
-    });
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
-  // ฟังก์ชันลบท่อน (เผื่อกดผิด)
+  // press + to add new content
+  void _addNewSection() => setState(() => _sections.add(StorySection()));
+
+  // delete content
   void _removeSection(int index) {
-    if (_sections.length > 1) {
-      setState(() {
-        _sections.removeAt(index);
-      });
-    }
+    if (_sections.length > 1) setState(() => _sections.removeAt(index));
   }
 
-  // เลือกรูปปก
+  // select Cover Image from device
   Future<void> _pickCoverImage() async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
       );
       if (pickedFile != null) {
+        // read file by Bytes to prepare upload
         final bytes = await pickedFile.readAsBytes();
         setState(() {
           _coverImageBytes = bytes;
@@ -75,7 +92,7 @@ class _MyWidgetState extends State<InsertPage> {
     }
   }
 
-  // เลือกรูปเนื้อหา (ต้องระบุ index ว่าเลือกให้ท่อนที่เท่าไหร่)
+  // select Content Image
   Future<void> _pickContentImage(int index) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
@@ -93,33 +110,41 @@ class _MyWidgetState extends State<InsertPage> {
     }
   }
 
+  // save to Firebase
   Future<void> _uploadToFirebase() async {
+    // validation
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Please enter Story Name")));
       return;
     }
+    // check Genre<1 ?
+    if (_selectedGenres.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please select at least one Genre")),
+      );
+      return;
+    }
 
     setState(() => _isUploading = true);
 
     try {
-      // 1. อัปโหลดรูปปก
+      // upload Cover Image to Firebase Storage
       String? coverUrl;
       if (_coverImageBytes != null) {
         final storageRef = FirebaseStorage.instance.ref().child(
           'story_covers/${DateTime.now().millisecondsSinceEpoch}_$_coverName',
         );
         await storageRef.putData(_coverImageBytes!);
-        coverUrl = await storageRef.getDownloadURL();
+        coverUrl = await storageRef
+            .getDownloadURL(); // retrieve Url of Cover Image
       }
 
-      // 2. วนลูปอัปโหลดรูปเนื้อหาทุกท่อน และเก็บข้อมูลเตรียมส่งเข้า DB
+      // loop for upload content
       List<Map<String, dynamic>> contentDataList = [];
-
       for (int i = 0; i < _sections.length; i++) {
         String? contentUrl;
-        // ถ้ารูปในท่อนนี้มี ให้ Upload
         if (_sections[i].imageBytes != null) {
           final storageRef = FirebaseStorage.instance.ref().child(
             'story_contents/${DateTime.now().millisecondsSinceEpoch}_${i}_${_sections[i].imageName}',
@@ -127,21 +152,23 @@ class _MyWidgetState extends State<InsertPage> {
           await storageRef.putData(_sections[i].imageBytes!);
           contentUrl = await storageRef.getDownloadURL();
         }
-
-        // เก็บข้อมูลท่อนนั้นๆ (รูป, อังกฤษ, ไทย) ลงตัวแปรชั่วคราว
+        // keep data
         contentDataList.add({
-          'index': i + 1, // ลำดับที่ 1, 2, 3...
+          'index': i + 1,
           'image_url': contentUrl ?? '',
           'text_en': _sections[i].enController.text,
           'text_th': _sections[i].thController.text,
         });
       }
 
-      // 3. บันทึกลง Firestore (เก็บเป็น Array ใน field เดียวชื่อ 'contents')
+      // convert List that select to , (send to Firebase)
+      String genreString = _selectedGenres.join(', ');
+
       await FirebaseFirestore.instance.collection('stories').add({
         'name': _nameController.text,
+        'genre': genreString, // keep value that have convert
         'cover_image': coverUrl ?? '',
-        'contents': contentDataList, // ส่งรายการเนื้อหาทั้งหมดไปเก็บ
+        'contents': contentDataList,
         'created_at': FieldValue.serverTimestamp(),
       });
 
@@ -149,9 +176,10 @@ class _MyWidgetState extends State<InsertPage> {
         context,
       ).showSnackBar(SnackBar(content: Text("Save Success!")));
 
-      // เคลียร์ค่าหลังบันทึกเสร็จ ให้เหลือท่อนเดียวเหมือนเดิม
+      // clear screen
       _nameController.clear();
       setState(() {
+        _selectedGenres.clear(); // clear value that selected
         _coverImageBytes = null;
         _sections = [StorySection()];
       });
@@ -161,7 +189,7 @@ class _MyWidgetState extends State<InsertPage> {
         context,
       ).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
-      setState(() => _isUploading = false);
+      setState(() => _isUploading = false); // stop load
     }
   }
 
@@ -172,47 +200,157 @@ class _MyWidgetState extends State<InsertPage> {
       appBar: AppBar(
         title: Text(
           'Storytelling Management',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: GoogleFonts.shortStack(color: Colors.black, fontSize: 28),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 15),
-            child: Icon(Icons.account_circle, color: Colors.black, size: 35),
+          // button for logout
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.account_circle,
+              color: Colors.black,
+              size: 35,
+            ),
+            onSelected: (value) async {
+              if (value == 'logout') {
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    // change to login_dart.page
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
+              }
+            },
+            // detail button user
+            itemBuilder: (BuildContext context) {
+              final user = FirebaseAuth.instance.currentUser;
+              return [
+                PopupMenuItem(
+                  enabled: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Signed in as",
+                        style: TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                      Text(
+                        user?.email ?? "Guest",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 10),
+                      Text(
+                        "Log Out",
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ];
+            },
           ),
+          const SizedBox(width: 15),
         ],
       ),
       body: _isUploading
-          ? Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator()) // show loading
           : SingleChildScrollView(
-              // Scroll ได้เมื่อเนื้อหายาวขึ้น
               child: Column(
                 children: [
-                  _buildTopMenu(),
+                  _buildTopMenu(), // top bar
                   Divider(thickness: 1),
                   Padding(
                     padding: EdgeInsets.all(20.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- ส่วน Cover Image (ส่วนหัว) ---
                         Text('*Cover Image', style: TextStyle(fontSize: 16)),
                         SizedBox(height: 10),
+                        // input data :  Cover Image, Name, Genre
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // box for select Cover Image
                             _buildImagePickerBox(
                               onTap: _pickCoverImage,
                               imageBytes: _coverImageBytes,
                             ),
                             SizedBox(width: 15),
                             Expanded(
-                              child: _buildTextFieldContainer(
-                                controller: _nameController,
-                                label: "Story's Name",
-                                hint: "The Hare and the Tortoise",
-                                height: 80,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // box for input name
+                                  _buildTextFieldContainer(
+                                    controller: _nameController,
+                                    label: "Story's Name",
+                                    height: 80,
+                                  ),
+                                  SizedBox(height: 15),
+
+                                  // make Genre tag (FilterChip)
+                                  Text(
+                                    "Genre",
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  SizedBox(height: 5),
+                                  Wrap(
+                                    spacing: 8.0,
+                                    runSpacing: 4.0,
+                                    children: _allGenres.map((genre) {
+                                      return FilterChip(
+                                        label: Text(genre),
+                                        // check button selected?
+                                        selected: _selectedGenres.contains(
+                                          genre,
+                                        ),
+                                        selectedColor: Colors.blue.shade100,
+                                        checkmarkColor: Colors.blue,
+                                        // change text color that selected
+                                        labelStyle: TextStyle(
+                                          color: _selectedGenres.contains(genre)
+                                              ? Colors.blue.shade900
+                                              : Colors.black,
+                                          fontSize: 12,
+                                        ),
+                                        onSelected: (bool selected) {
+                                          setState(() {
+                                            if (selected) {
+                                              _selectedGenres.add(
+                                                genre,
+                                              ); // insert in list
+                                            } else {
+                                              _selectedGenres.remove(
+                                                genre,
+                                              ); // delete out list
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -220,17 +358,13 @@ class _MyWidgetState extends State<InsertPage> {
                         SizedBox(height: 20),
                         Divider(),
                         SizedBox(height: 20),
-
-                        // --- ส่วน Content Loop (วนลูปแสดงรายการท่อนเนื้อหา) ---
-                        // ตรงนี้แหละครับ ที่จะทำให้มันงอก "ต่อจากอันเดิม" ลงมาเรื่อยๆ
+                        // show content
                         ..._sections.asMap().entries.map((entry) {
                           int index = entry.key;
                           StorySection section = entry.value;
-
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // หัวข้อท่อน (เช่น 1 Content Image, 2 Content Image)
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -239,7 +373,6 @@ class _MyWidgetState extends State<InsertPage> {
                                     '${index + 1} Content Image',
                                     style: TextStyle(fontSize: 16),
                                   ),
-                                  // ปุ่มลบ (แสดงเฉพาะถ้ามีมากกว่า 1 ท่อน)
                                   if (_sections.length > 1)
                                     IconButton(
                                       icon: Icon(
@@ -251,11 +384,10 @@ class _MyWidgetState extends State<InsertPage> {
                                 ],
                               ),
                               SizedBox(height: 10),
-
-                              // ฟอร์มใส่รูปและข้อความ
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // box for selected Content Image
                                   _buildImagePickerBox(
                                     onTap: () => _pickContentImage(index),
                                     imageBytes: section.imageBytes,
@@ -264,12 +396,14 @@ class _MyWidgetState extends State<InsertPage> {
                                   Expanded(
                                     child: Column(
                                       children: [
+                                        // input storyline EN
                                         _buildTextFieldContainer(
                                           controller: section.enController,
                                           label: "Storyline EN",
                                           maxLines: 3,
                                         ),
                                         SizedBox(height: 10),
+                                        // input storyline TH
                                         _buildTextFieldContainer(
                                           controller: section.thController,
                                           label: "Storyline TH",
@@ -280,24 +414,19 @@ class _MyWidgetState extends State<InsertPage> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 30), // ระยะห่างระหว่างท่อน
+                              SizedBox(height: 30),
                             ],
                           );
                         }).toList(),
-
-                        // --- ปุ่ม (+) เพิ่มท่อนถัดไป ---
                         Center(
+                          // button for create new content
                           child: IconButton(
-                            onPressed:
-                                _addNewSection, // กดแล้วเพิ่มท่อนใหม่ต่อท้ายทันที
+                            onPressed: _addNewSection,
                             icon: Icon(Icons.add_circle_outline, size: 45),
                             tooltip: "Add next content block",
                           ),
                         ),
-
                         SizedBox(height: 30),
-
-                        // --- ปุ่ม Save ---
                         Row(
                           children: [
                             OutlinedButton(
@@ -305,10 +434,11 @@ class _MyWidgetState extends State<InsertPage> {
                               child: Text("Generate Audio"),
                             ),
                             Spacer(),
+                            // button for press save to Firebase
                             ElevatedButton.icon(
                               onPressed: _uploadToFirebase,
                               icon: Icon(Icons.cloud_upload),
-                              label: Text("Save to Cloud"),
+                              label: Text("Save"),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
@@ -330,52 +460,63 @@ class _MyWidgetState extends State<InsertPage> {
     );
   }
 
-  // Helper Widgets (เหมือนเดิม)
-  // ใน InsertPage.dart
-
+  // top bar
   Widget _buildTopMenu() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // ปุ่ม Search (กดแล้วไปหน้า Search)
-          GestureDetector(
-            onTap: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const SearchPage()),
-              );
-            },
-            child: Text(
-              "Search",
-              style: TextStyle(fontSize: 16, color: Colors.black),
+          _menuItem(
+            "Search",
+            false,
+            () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const SearchPage()),
             ),
           ),
-
-          // ปุ่ม Insert (หน้านี้ - เป็นสีฟ้า)
-          Column(
-            children: [
-              Text(
-                "Insert",
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              Container(
-                height: 3,
-                width: 50,
-                color: Colors.blue,
-                margin: EdgeInsets.only(top: 5),
-              ),
-            ],
+          _menuItem("Insert", true, () {}),
+          _menuItem(
+            "Edit",
+            false,
+            () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const EditPage()),
+            ),
           ),
+          _menuItem(
+            "Delete",
+            false,
+            () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const DeletePage()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          // ปุ่มอื่นๆ
-          Text("Edit", style: TextStyle(color: Colors.grey, fontSize: 16)),
-          Text("Delete", style: TextStyle(color: Colors.grey, fontSize: 16)),
+  Widget _menuItem(String title, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isActive ? Colors.blue : Colors.black,
+              fontSize: 16,
+            ),
+          ),
+          if (isActive)
+            Container(
+              height: 3,
+              width: 50,
+              color: Colors.blue,
+              margin: EdgeInsets.only(top: 5),
+            ),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'search_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,10 +13,13 @@ class LoginPage extends StatefulWidget {
 class _MyWidgetState extends State<LoginPage> {
   bool _isObscure = true;
 
+  // controller for recive input from 'Email' & 'Password
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // log in with Firebase ( Authentication )
   Future<void> signInWithEmailPassword() async {
+    // show loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -31,6 +35,7 @@ class _MyWidgetState extends State<LoginPage> {
       Navigator.of(context).pop();
 
       if (mounted) {
+        // login succes >> move to search_page.dart
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const SearchPage()),
@@ -38,7 +43,7 @@ class _MyWidgetState extends State<LoginPage> {
       }
     } on FirebaseAuthException catch (e) {
       Navigator.of(context).pop();
-
+      // manage error
       String errorMessage = 'Incorrect E-mail or Password';
 
       if (e.code == 'user-not-found' ||
@@ -65,7 +70,16 @@ class _MyWidgetState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Storytelling Management')),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        title: Text(
+          'Storytelling Management',
+          style: GoogleFonts.shortStack(color: Colors.black, fontSize: 28),
+        ),
+        elevation: 0,
+        centerTitle: false,
+      ),
+      backgroundColor: Colors.white,
       body: Center(
         child: Container(
           width: 300,
@@ -74,7 +88,15 @@ class _MyWidgetState extends State<LoginPage> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15.0),
             border: Border.all(color: Colors.black),
-            color: Colors.white,
+            // gradient color in box login
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              // shade color from light blue to white
+              colors: [Color(0xFFEBF8FF), Colors.white],
+              // light blue start at top and white start at center (linear)
+              stops: [0.0, 0.5],
+            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -84,7 +106,11 @@ class _MyWidgetState extends State<LoginPage> {
                 children: [
                   Text(
                     'Log in',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.shortStack(
+                      color: Colors.black,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -102,17 +128,18 @@ class _MyWidgetState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
+                  // create TextFormField to input 'Email'
                   Expanded(
                     child: TextFormField(
-                      controller: _emailController,
+                      controller: _emailController, // connect _emailController
                       decoration: InputDecoration(
                         labelText: 'Email',
                         hintText: 'adminbew22@gmail.com',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15.0),
+                          borderRadius: BorderRadius.circular(15),
                         ),
                       ),
-                      keyboardType: TextInputType.emailAddress,
+                      keyboardType: TextInputType.emailAddress, // keyboard @
                     ),
                   ),
                 ],
@@ -121,23 +148,30 @@ class _MyWidgetState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
+                  // create TextFormField to input 'Password'
                   Expanded(
                     child: TextFormField(
-                      controller: _passwordController,
-                      obscureText: _isObscure,
+                      controller:
+                          _passwordController, // connect _passwordController
+                      obscureText: _isObscure, // hide password
                       decoration: InputDecoration(
                         labelText: 'Password',
                         hintText: '******',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15.0),
+                          borderRadius: BorderRadius.circular(15),
                         ),
+                        // eye icon
+                        // _isObscure is true => close eye
+                        // _isObscure is false => open eye
                         suffixIcon: IconButton(
                           icon: Icon(
                             _isObscure
                                 ? Icons.visibility_off
                                 : Icons.visibility,
                           ),
+                          // press eye button
                           onPressed: () {
+                            // change true <=> false
                             setState(() {
                               _isObscure = !_isObscure;
                             });
@@ -149,16 +183,33 @@ class _MyWidgetState extends State<LoginPage> {
                 ],
               ),
               SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: signInWithEmailPassword,
-                      child: Text('Log in'),
+              Container(
+                width: double.infinity,
+                height: 50,
+                decoration: BoxDecoration(
+                  // gradient color for button login
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFB4E1FF), Color(0xFFF3FFBD)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
+                // create button for login
+                child: ElevatedButton(
+                  onPressed: signInWithEmailPassword,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
                     ),
                   ),
-                ],
+                  child: Text(
+                    'Log in',
+                    style: TextStyle(fontSize: 16, color: Colors.black),
+                  ),
+                ),
               ),
               SizedBox(height: 15),
               Row(
